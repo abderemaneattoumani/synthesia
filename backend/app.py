@@ -7,9 +7,19 @@ from datetime import datetime
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
-CORS(app)  # Permet les requêtes depuis le frontend
 
-# Route de test (vérifie que le serveur fonctionne)
+# ═══════════════════════════════════════════════════════
+# CONFIGURATION CORS (TRÈS IMPORTANT POUR VERCEL)
+# ═══════════════════════════════════════════════════════
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+# Route de test
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Simple vérification que l'API est en ligne"""
@@ -18,41 +28,36 @@ def health_check():
         "message": "SyntheSIA API is running!"
     })
 
-# Route principale : génération de rapport
-@app.route('/api/generate-report', methods=['POST'])
+# Route principale
+@app.route('/api/generate-report', methods=['POST', 'OPTIONS'])
 def generate_report():
     """
-    Reçoit des données, appelle l'IA, génère un PDF
-    
-    Données attendues (JSON) :
-    {
-        "title": "Titre du rapport",
-        "raw_data": "Notes techniques brutes...",
-        "author": "Nom de l'auteur",
-        "role": "Poste de l'auteur"
-    }
+    Génère un rapport PDF à partir de données textuelles
     """
+    # Gérer les requêtes OPTIONS (preflight CORS)
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
-        # Récupération des données envoyées par le frontend
+        # Récupération des données
         data = request.json
         title = data.get('title', 'Rapport sans titre')
         raw_data = data.get('raw_data', '')
         author = data.get('author', 'Anonyme')
-        role = data.get('role', 'Non spécifié')  # ← NOUVEAU
+        role = data.get('role', 'Non spécifié')
         
-        # Vérification que les données ne sont pas vides
         if not raw_data:
             return jsonify({"error": "Aucune donnée fournie"}), 400
         
-        # ÉTAPE 1 : Appel à l'IA pour générer le résumé
+        # Génération IA
         print(f"🤖 Génération du résumé IA pour : {title}")
         summary = generate_summary(raw_data)
         
-        # ÉTAPE 2 : Création du PDF avec le résumé
+        # Création PDF
         print(f"📄 Création du PDF...")
-        pdf_path = create_pdf(title, summary, author, role)  # ← MODIFIÉ
+        pdf_path = create_pdf(title, summary, author, role)
         
-        # ÉTAPE 3 : Envoi du PDF au frontend
+        # Envoi du PDF
         return send_file(
             pdf_path,
             mimetype='application/pdf',
@@ -64,9 +69,18 @@ def generate_report():
         print(f"❌ Erreur : {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Lancement du serveur
+# ═══════════════════════════════════════════════════════
+# CONFIGURATION POUR VERCEL (SERVERLESS)
+# ═══════════════════════════════════════════════════════
+
+# Cette variable est nécessaire pour Vercel
+app = app
+
+# Handler pour les fonctions serverless Vercel
+def handler(request, context):
+    """Point d'entrée pour Vercel Serverless Functions"""
+    return app(request.environ, context)
+
+# Pour développement local uniquement
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-
-# Pour Vercel (serverless)
-app = app
