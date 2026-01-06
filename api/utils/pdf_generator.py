@@ -80,7 +80,7 @@ def clean_markdown_formatting(text):
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', text)
     
-    # Supprimer emojis
+    # Supprime emojis
     emoji_pattern = re.compile(
         "["
         "\U0001F600-\U0001F64F"
@@ -94,7 +94,7 @@ def clean_markdown_formatting(text):
     )
     text = emoji_pattern.sub('', text)
     
-    # Supprimer les séparateurs disgracieux
+    # Supprime les séparateurs 
     text = re.sub(r'={3,}', '', text)  # ← SUPPRIME ===
     text = re.sub(r'-{3,}', '', text)  # ← SUPPRIME ---
     
