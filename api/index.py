@@ -1,23 +1,20 @@
-# ═══════════════════════════════════════════════════════
-# POINT D'ENTRÉE VERCEL SERVERLESS
-# ═══════════════════════════════════════════════════════
-
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from datetime import datetime
-import os
-
-# Importer depuis le même dossier (api/)
 from utils.ai_handler import generate_summary
 from utils.pdf_generator import create_pdf
+from datetime import datetime
+import os
+import sys
 
-# ═══════════════════════════════════════════════════════
-# INITIALISATION FLASK
-# ═══════════════════════════════════════════════════════
+# Ajouter le dossier api au path Python
+sys.path.insert(0, os.path.dirname(__file__))
 
+# Initialisation de l'application Flask
 app = Flask(__name__)
 
-# Configuration CORS
+# ═══════════════════════════════════════════════════════
+# CONFIGURATION CORS (TRÈS IMPORTANT POUR VERCEL)
+# ═══════════════════════════════════════════════════════
 CORS(app, resources={
     r"/api/*": {
         "origins": "*",
@@ -26,24 +23,22 @@ CORS(app, resources={
     }
 })
 
-# ═══════════════════════════════════════════════════════
-# ROUTES
-# ═══════════════════════════════════════════════════════
-
+# Route de test
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Vérification que l'API fonctionne"""
+    """Simple vérification que l'API est en ligne"""
     return jsonify({
         "status": "online",
-        "message": "SyntheSIA API is running on Vercel!",
-        "timestamp": datetime.now().isoformat()
+        "message": "SyntheSIA API is running!"
     })
 
+# Route principale
 @app.route('/api/generate-report', methods=['POST', 'OPTIONS'])
 def generate_report():
-    """Génère un rapport PDF"""
-    
-    # Gérer preflight CORS
+    """
+    Génère un rapport PDF à partir de données textuelles
+    """
+    # Gérer les requêtes OPTIONS (preflight CORS)
     if request.method == 'OPTIONS':
         return '', 204
     
@@ -76,13 +71,20 @@ def generate_report():
         
     except Exception as e:
         print(f"❌ Erreur : {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # ═══════════════════════════════════════════════════════
-# EXPORT POUR VERCEL
+# CONFIGURATION POUR VERCEL (SERVERLESS)
 # ═══════════════════════════════════════════════════════
 
-# Vercel détecte automatiquement cette variable
-handler = app
+# Cette variable est nécessaire pour Vercel
+app = app
+
+# Handler pour les fonctions serverless Vercel
+def handler(request, context):
+    """Point d'entrée pour Vercel Serverless Functions"""
+    return app(request.environ, context)
+
+# Pour développement local uniquement
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
