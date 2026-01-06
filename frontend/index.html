@@ -147,44 +147,120 @@
             document.getElementById('error').classList.add('hidden');
             
             try {
-                // Appel à l'API backend
-                const response = await fetch('http://localhost:5000/api/generate-report', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        title: title, 
-                        author: author, 
-                        role: role,
-                        raw_data: rawData 
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Erreur lors de la génération du rapport');
-                }
-                
-                // Téléchargement du PDF
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `rapport_${Date.now()}.pdf`;
-                a.click();
-                
-                // Affichage du succès
-                document.getElementById('result').classList.remove('hidden');
-                
-            } catch (error) {
-                // Affichage de l'erreur
-                document.getElementById('errorMessage').textContent = error.message;
-                document.getElementById('error').classList.remove('hidden');
-            } finally {
-                // Réinitialisation du bouton
-                document.getElementById('buttonText').textContent = '🚀 Générer le rapport PDF';
-                document.getElementById('loader').classList.add('hidden');
-            }
+    // ═══════════════════════════════════════════════════════
+    // DÉTECTION AUTOMATIQUE DE L'ENVIRONNEMENT
+    // ═══════════════════════════════════════════════════════
+    
+    // Si on est en local : http://localhost:5000
+    // Si on est en production (Vercel) : URL relative (même domaine)
+    const API_BASE = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : window.location.origin;  // Utilise le domaine actuel
+    
+    console.log('🌐 Environnement détecté:', window.location.hostname);
+    console.log('🔗 URL API utilisée:', API_BASE);
+    
+    // ═══════════════════════════════════════════════════════
+    // APPEL À L'API BACKEND
+    // ═══════════════════════════════════════════════════════
+    
+    const response = await fetch(`${API_BASE}/api/generate-report`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+            title: title, 
+            author: author, 
+            role: role,
+            raw_data: rawData 
+        })
+    });
+    
+    // ═══════════════════════════════════════════════════════
+    // GESTION DES ERREURS HTTP
+    // ═══════════════════════════════════════════════════════
+    
+    if (!response.ok) {
+        // Essayer de récupérer le message d'erreur du serveur
+        let errorMessage = 'Erreur lors de la génération du rapport';
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+            // Si pas de JSON, garder le message par défaut
+        }
+        throw new Error(`${errorMessage} (Code: ${response.status})`);
+    }
+    
+    // ═══════════════════════════════════════════════════════
+    // TÉLÉCHARGEMENT DU PDF
+    // ═══════════════════════════════════════════════════════
+    
+    const blob = await response.blob();
+    
+    // Vérifier que c'est bien un PDF
+    if (blob.type !== 'application/pdf') {
+        throw new Error('Le serveur n\'a pas retourné un PDF valide');
+    }
+    
+    // Créer le lien de téléchargement
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rapport_${Date.now()}.pdf`;
+    document.body.appendChild(a);  // Nécessaire pour Firefox
+    a.click();
+    
+    // Nettoyer
+    setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }, 100);
+    
+    // ═══════════════════════════════════════════════════════
+    // AFFICHAGE DU SUCCÈS
+    // ═══════════════════════════════════════════════════════
+    
+    document.getElementById('result').classList.remove('hidden');
+    console.log('✅ Rapport généré avec succès');
+    
+} catch (error) {
+    // ═══════════════════════════════════════════════════════
+    // GESTION DES ERREURS
+    // ═══════════════════════════════════════════════════════
+    
+    console.error('❌ Erreur:', error);
+    
+    // Message d'erreur détaillé pour l'utilisateur
+    let userMessage = error.message;
+    
+    // Erreurs réseau
+    if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+    }
+    
+    // Erreur 500
+    if (error.message.includes('500')) {
+        userMessage = 'Erreur serveur. L\'IA a peut-être rencontré un problème. Réessayez dans quelques instants.';
+    }
+    
+    // Erreur 429 (rate limit)
+    if (error.message.includes('429')) {
+        userMessage = 'Trop de requêtes. Attendez quelques secondes avant de réessayer.';
+    }
+    
+    document.getElementById('errorMessage').textContent = userMessage;
+    document.getElementById('error').classList.remove('hidden');
+    
+} finally {
+    // ═══════════════════════════════════════════════════════
+    // RÉINITIALISATION DE L'INTERFACE
+    // ═══════════════════════════════════════════════════════
+    
+    document.getElementById('buttonText').textContent = '🚀 Générer le rapport PDF';
+    document.getElementById('loader').classList.add('hidden');
+}
         });
     </script>
 
