@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyntheSIA - Générateur de Rapports IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    
+    <div class="container mx-auto px-4 py-8">
+        
+        <!-- En-tête -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                🤖 SyntheSIA
+            </h1>
+            <p class="text-gray-600">Transformez vos notes en rapports professionnels via IA</p>
+        </div>
+
+        <!-- Formulaire principal -->
+        <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-xl p-8">
+            
+            <form id="reportForm">
+                
+                <!-- Titre du rapport -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">
+                        📝 Titre du rapport
+                    </label>
+                    <input 
+                        type="text" 
+                        id="title" 
+                        required
+                        placeholder="Ex: Intervention maintenance serveur"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+
+                <!-- Grille 2 colonnes : Nom + Poste -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    
+                    <!-- Nom de l'auteur -->
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            👤 Votre nom
+                        </label>
+                        <input 
+                            type="text" 
+                            id="author" 
+                            required
+                            placeholder="Ex: Jean Dupont"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <!-- Poste/Rôle de l'auteur -->
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            💼 Votre poste/rôle
+                        </label>
+                        <input 
+                            type="text" 
+                            id="role" 
+                            required
+                            placeholder="Ex: Technicien IT, Consultant, Ingénieur..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                </div>
+
+                <!-- Notes techniques -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">
+                        📋 Notes techniques (saisie libre)
+                    </label>
+                    <textarea 
+                        id="rawData" 
+                        required
+                        rows="10"
+                        placeholder="Décrivez l'intervention, le problème rencontré, les actions effectuées..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    ></textarea>
+                    <p class="text-sm text-gray-500 mt-2">
+                        💡 Astuce : Plus vos notes sont détaillées, plus le rapport IA sera précis et complet !
+                    </p>
+                </div>
+
+                <!-- Bouton de génération -->
+                <button 
+                    type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center"
+                >
+                    <span id="buttonText">🚀 Générer le rapport PDF</span>
+                    <span id="loader" class="hidden ml-2">
+                        <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                </button>
+
+            </form>
+
+            <!-- Zone de résultat -->
+            <div id="result" class="mt-6 hidden">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p class="text-green-700 font-semibold">✅ Rapport généré avec succès !</p>
+                    <p class="text-green-600 text-sm mt-1">Le fichier PDF a été téléchargé automatiquement.</p>
+                </div>
+            </div>
+
+            <!-- Zone d'erreur -->
+            <div id="error" class="mt-6 hidden">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p class="text-red-700 font-semibold">❌ <span id="errorMessage"></span></p>
+                    <p class="text-red-600 text-sm mt-1">Vérifiez votre connexion et réessayez.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Pied de page -->
+        <div class="text-center mt-8 text-gray-600 text-sm">
+            <p>SyntheSIA - Abdérémane Attoumani</p>
+            <p class="mt-1">Powered by Groq AI (Llama 3.3)</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Gestion du formulaire
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Récupération des valeurs
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const role = document.getElementById('role').value;
+            const rawData = document.getElementById('rawData').value;
+            
+            // Affichage du loader
+            document.getElementById('buttonText').textContent = '⏳ Génération en cours...';
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            
+            try {
+                // Appel à l'API backend
+                const response = await fetch('http://localhost:5000/api/generate-report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        title: title, 
+                        author: author, 
+                        role: role,
+                        raw_data: rawData 
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la génération du rapport');
+                }
+                
+                // Téléchargement du PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rapport_${Date.now()}.pdf`;
+                a.click();
+                
+                // Affichage du succès
+                document.getElementById('result').classList.remove('hidden');
+                
+            } catch (error) {
+                // Affichage de l'erreur
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('error').classList.remove('hidden');
+            } finally {
+                // Réinitialisation du bouton
+                document.getElementById('buttonText').textContent = '🚀 Générer le rapport PDF';
+                document.getElementById('loader').classList.add('hidden');
+            }
+        });
+    </script>
+
+</body>
+</html>
