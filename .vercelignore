@@ -1,6 +1,6 @@
 backend/__pycache__/
 backend/generated_reports/
 *.pyc
-*.pyo
 .env
 .git/
+__pycache__/
