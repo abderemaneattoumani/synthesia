@@ -1,33 +1,43 @@
 """
-Route /api/health pour Vercel
-Handler natif Vercel Python - pas de Flask
+route /api/health pour vercel
+handler natif vercel python - pas de flask
 """
 import json
 import sys
 import os
 
+# logs au chargement du module
 print("=" * 60)
-print("🚀 CHARGEMENT api/health.py")
+print("chargement api/health.py")
 print("=" * 60)
-print(f"Python version: {sys.version}")
-print(f"Working directory: {os.getcwd()}")
-print(f"GROQ_API_KEY configured: {bool(os.environ.get('GROQ_API_KEY'))}")
+print(f"python version: {sys.version}")
+print(f"working directory: {os.getcwd()}")
+print(f"groq_api_key configured: {bool(os.environ.get('GROQ_API_KEY'))}")
 print("=" * 60)
 
 def handler(request):
     """
-    Handler Vercel natif pour /api/health
-    Accepte un objet Request de Vercel et retourne une Response
+    handler vercel natif pour /api/health
+    accepte un objet request de vercel et retourne une réponse
     """
     try:
-        print("✅ Handler health appelé")
-        print(f"   Method: {request.method}")
-        print(f"   Path: {request.path}")
-        print(f"   Headers: {dict(request.headers)}")
+        print("handler health appelé")
         
-        # Vérifier la clé API Groq
+        # récupérer la méthode http (get, post, etc.)
+        # vercel peut passer request comme dict ou objet
+        if hasattr(request, 'method'):
+            method = request.method
+        elif isinstance(request, dict):
+            method = request.get('method', 'GET')
+        else:
+            method = getattr(request, 'method', 'GET')
+        
+        print(f"   method: {method}")
+        
+        # vérifier la clé api groq dans les variables d'environnement
         groq_configured = bool(os.environ.get('GROQ_API_KEY'))
         
+        # préparer la réponse json
         response_data = {
             "status": "online",
             "message": "SyntheSIA is running",
@@ -35,8 +45,9 @@ def handler(request):
             "environment": "production" if os.environ.get('VERCEL') else "development"
         }
         
-        print(f"✅ Réponse générée: {response_data}")
+        print(f"réponse générée: {response_data}")
         
+        # retourner la réponse au format vercel
         return {
             'statusCode': 200,
             'headers': {
@@ -49,7 +60,8 @@ def handler(request):
         }
         
     except Exception as e:
-        print(f"❌ ERREUR dans handler health: {str(e)}")
+        # en cas d'erreur, logger et retourner une erreur 500
+        print(f"erreur dans handler health: {str(e)}")
         import traceback
         print(traceback.format_exc())
         
@@ -64,4 +76,3 @@ def handler(request):
                 "details": str(e)
             }, ensure_ascii=False)
         }
-

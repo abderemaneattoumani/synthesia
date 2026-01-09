@@ -1,3 +1,6 @@
+"""
+générateur de pdf professionnel avec reportlab
+"""
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm, mm
@@ -11,17 +14,18 @@ import re
 
 def header_footer(canvas, doc, title, author):
     """
-    Fonction appelée automatiquement pour CHAQUE page
-    Dessine l'en-tête et le pied de page
+    fonction appelée automatiquement pour chaque page
+    dessine l'en-tête et le pied de page
     """
     canvas.saveState()
     
     page_width, page_height = A4
     
-    # EN-TÊTE
+    # en-tête avec fond bleu
     canvas.setFillColor(colors.HexColor('#1e3a8a'))
     canvas.rect(0, page_height - 2*cm, page_width, 2*cm, fill=1, stroke=0)
     
+    # texte blanc dans l'en-tête
     canvas.setFillColor(colors.white)
     canvas.setFont('Helvetica-Bold', 16)
     canvas.drawString(2*cm, page_height - 1.3*cm, "SyntheSIA")
@@ -29,7 +33,7 @@ def header_footer(canvas, doc, title, author):
     canvas.setFont('Helvetica', 10)
     canvas.drawString(2*cm, page_height - 1.7*cm, "Rapport d'Intervention Technique")
     
-    # Logo PNG
+    # logo png si disponible
     logo_path = os.path.join('assets', 'logo.png')
     if os.path.exists(logo_path):
         try:
@@ -45,7 +49,7 @@ def header_footer(canvas, doc, title, author):
         except:
             pass
     
-    # PIED DE PAGE
+    # pied de page avec ligne et informations
     canvas.setStrokeColor(colors.HexColor('#e5e7eb'))
     canvas.setLineWidth(0.5)
     canvas.line(2*cm, 2*cm, page_width - 2*cm, 2*cm)
@@ -53,18 +57,21 @@ def header_footer(canvas, doc, title, author):
     canvas.setFillColor(colors.HexColor('#6b7280'))
     canvas.setFont('Helvetica', 8)
     
+    # date de génération à gauche
     canvas.drawString(
         2*cm, 
         1.5*cm, 
         f"Généré le {datetime.now().strftime('%d/%m/%Y a %H:%M')}"
     )
     
+    # texte au centre
     canvas.drawCentredString(
         page_width / 2, 
         1.5*cm, 
         "Document confidentiel - Usage interne"
     )
     
+    # numéro de page à droite
     canvas.drawRightString(
         page_width - 2*cm, 
         1.5*cm, 
@@ -74,13 +81,18 @@ def header_footer(canvas, doc, title, author):
     canvas.restoreState()
 
 def clean_markdown_formatting(text):
-    """Nettoie le texte des formats Markdown et emojis"""
-    
+    """
+    nettoie le texte des formats markdown et emojis
+    convertit le markdown en html pour reportlab
+    """
+    # supprimer les titres markdown (# ## ###)
     text = re.sub(r'#{1,6}\s*', '', text)
+    # convertir **gras** en <b>gras</b>
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    # convertir *italique* en <i>italique</i>
     text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', text)
     
-    # Supprimer emojis
+    # supprimer les emojis (unicode)
     emoji_pattern = re.compile(
         "["
         "\U0001F600-\U0001F64F"
@@ -94,22 +106,27 @@ def clean_markdown_formatting(text):
     )
     text = emoji_pattern.sub('', text)
     
-    # Supprimer les séparateurs disgracieux
-    text = re.sub(r'={3,}', '', text)  # ← SUPPRIME ===
-    text = re.sub(r'-{3,}', '', text)  # ← SUPPRIME ---
+    # supprimer les séparateurs markdown (=== et ---)
+    text = re.sub(r'={3,}', '', text)
+    text = re.sub(r'-{3,}', '', text)
     
+    # remplacer les puces spéciales par des tirets simples
     text = text.replace('■', '-')
     text = text.replace('●', '-')
     text = text.replace('•', '-')
     text = text.replace('◆', '-')
     text = text.replace('▸', '-')
     
+    # normaliser les listes à puces
     text = re.sub(r'^\s*[-*+]\s+', '- ', text, flags=re.MULTILINE)
     
     return text
 
 def detect_section_title(line):
-    """Détecte si une ligne est un titre de section"""
+    """
+    détecte si une ligne est un titre de section
+    cherche des mots-clés en majuscules
+    """
     keywords = [
         'CONTEXTE', 'PROBLEME', 'DIAGNOSTIC', 'ACTIONS', 'RESULTATS', 
         'RECOMMANDATIONS', 'SUIVI', 'PHASE', 'ETAPE', 'CONFIGURATION',
@@ -119,6 +136,7 @@ def detect_section_title(line):
     
     line_upper = line.upper().strip()
     
+    # si la ligne est en majuscules et contient un mot-clé
     if line.isupper() and len(line) < 100:
         for keyword in keywords:
             if keyword in line_upper:
@@ -128,27 +146,22 @@ def detect_section_title(line):
 
 def create_pdf(title, content, author, role):
     """
-    Génère un PDF professionnel avec signature flexible
+    génère un pdf professionnel avec signature flexible
     
-    Args:
-        title: Titre du rapport
-        content: Contenu IA
-        author: Nom de l'auteur
-        role: Poste/rôle de l'auteur
-    
-    Returns:
-        str: Chemin complet du fichier PDF généré (dans /tmp pour Vercel)
+    param title: titre du rapport
+    param content: contenu ia généré
+    param author: nom de l'auteur
+    param role: poste/rôle de l'auteur
+    return: chemin complet du fichier pdf généré (dans /tmp pour vercel)
     """
     import tempfile
     
-    # ═══════════════════════════════════════════════════════
-    # UTILISER /tmp POUR VERCEL (read-only sauf /tmp)
-    # ═══════════════════════════════════════════════════════
-    # Vercel est read-only sauf pour /tmp
-    # On utilise tempfile pour créer un fichier temporaire
+    # utiliser /tmp pour vercel (read-only sauf /tmp)
+    # vercel est read-only sauf pour /tmp
+    # on utilise tempfile pour créer un fichier temporaire
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Créer un fichier temporaire dans /tmp
+    # créer un fichier temporaire dans /tmp
     temp_file = tempfile.NamedTemporaryFile(
         mode='wb',
         suffix='.pdf',
@@ -159,8 +172,9 @@ def create_pdf(title, content, author, role):
     filename = temp_file.name
     temp_file.close()
     
-    print(f"📄 Création du PDF dans: {filename}")
+    print(f"création du pdf dans: {filename}")
     
+    # créer le document pdf avec marges
     doc = SimpleDocTemplate(
         filename,
         pagesize=A4,
@@ -170,9 +184,10 @@ def create_pdf(title, content, author, role):
         bottomMargin=2.5*cm
     )
     
-    # STYLES
+    # styles pour le document
     styles = getSampleStyleSheet()
     
+    # style pour le titre principal
     style_title = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -184,34 +199,34 @@ def create_pdf(title, content, author, role):
         fontName='Helvetica-Bold'
     )
     
-    # Style pour les titres de section (bien visibles)
+    # style pour les titres de section (bien visibles)
     style_section = ParagraphStyle(
         'SectionTitle',
         parent=styles['Heading2'],
-        fontSize=14,                              # ← AUGMENTÉ (était 13)
+        fontSize=14,
         textColor=colors.HexColor('#1e3a8a'),
         spaceAfter=12,
-        spaceBefore=20,                           # ← PLUS D'ESPACE AVANT
+        spaceBefore=20,
         fontName='Helvetica-Bold',
         leading=18,
         leftIndent=0,
-        # Ajout d'un trait sous le titre pour bien le distinguer
         borderWidth=0,
         borderPadding=8
     )
     
-    # Style pour le contenu (bien différencié des titres)
+    # style pour le contenu (bien différencié des titres)
     style_content = ParagraphStyle(
         'CustomBody',
         parent=styles['BodyText'],
-        fontSize=10,                              # ← Contenu plus petit que titres
+        fontSize=10,
         leading=16,
         spaceAfter=10,
         alignment=TA_JUSTIFY,
         textColor=colors.HexColor('#374151'),
-        fontName='Helvetica'                      # ← Normal (pas Bold)
+        fontName='Helvetica'
     )
     
+    # style pour les listes à puces
     style_bullet = ParagraphStyle(
         'BulletPoint',
         parent=style_content,
@@ -221,19 +236,19 @@ def create_pdf(title, content, author, role):
         spaceAfter=6
     )
     
-    # CONSTRUCTION
+    # construction du contenu du pdf
     story = []
     
-    # Titre
+    # titre principal
     story.append(Paragraph(title, style_title))
     story.append(Spacer(1, 0.3*cm))
     
-    # Métadonnées
+    # métadonnées dans un tableau
     metadata_data = [
         ['Date', datetime.now().strftime('%d/%m/%Y')],
         ['Heure', datetime.now().strftime('%H:%M')],
         ['Auteur', author],
-        ['Poste', role],  # ← NOUVEAU
+        ['Poste', role],
         ['Type', 'Rapport d\'intervention technique'],
         ['Reference', f'SYNTH-{timestamp}']
     ]
@@ -254,7 +269,7 @@ def create_pdf(title, content, author, role):
     story.append(metadata_table)
     story.append(Spacer(1, 0.8*cm))
     
-    # Badge statut
+    # badge statut (vert)
     status_data = [['RAPPORT VALIDÉ - Document généré automatiquement par IA']]
     status_table = Table(status_data, colWidths=[16*cm])
     status_table.setStyle(TableStyle([
@@ -270,7 +285,7 @@ def create_pdf(title, content, author, role):
     story.append(status_table)
     story.append(Spacer(1, 0.8*cm))
     
-    # Nettoyer le contenu
+    # nettoyer le contenu et le formater
     content = clean_markdown_formatting(content)
     lines = content.split('\n')
     
@@ -279,14 +294,14 @@ def create_pdf(title, content, author, role):
         if not line:
             continue
         
-        # DÉTECTION AMÉLIORÉE DES TITRES DE SECTION
+        # détection des titres de section
         if detect_section_title(line):
-            story.append(Spacer(1, 0.5*cm))  # Espace avant le titre
+            story.append(Spacer(1, 0.5*cm))
             
-            # Mettre le titre en majuscules ET gras avec trait de séparation visuel
+            # mettre le titre en gras
             story.append(Paragraph(f"<b>{line}</b>", style_section))
             
-            # Ligne décorative sous le titre
+            # ligne décorative sous le titre
             line_data = [['  ']]
             line_table = Table(line_data, colWidths=[16*cm])
             line_table.setStyle(TableStyle([
@@ -296,20 +311,20 @@ def create_pdf(title, content, author, role):
             ]))
             story.append(line_table)
         
-        # Détection des listes à puces
+        # détection des listes à puces
         elif line.startswith('-') or line.startswith('•'):
             clean_line = re.sub(r'^[-•]\s*', '', line)
             story.append(Paragraph(f"- {clean_line}", style_bullet))
         
-        # Contenu normal
+        # contenu normal
         else:
             story.append(Paragraph(line, style_content))
     
-    # SIGNATURE FLEXIBLE
+    # signature flexible (tableau)
     signature_data = [
         ['Rapport généré par', 'Valide par'],
         [author],
-        [role],  # ← LIGNES VIDES
+        [role],
     ]
     
     signature_table = Table(signature_data, colWidths=[8*cm, 8*cm])
@@ -326,11 +341,11 @@ def create_pdf(title, content, author, role):
     
     story.append(signature_table)
     
-    # GÉNÉRATION
+    # génération du pdf avec en-tête et pied de page
     def page_template(canvas, doc):
         header_footer(canvas, doc, title, author)
     
     doc.build(story, onFirstPage=page_template, onLaterPages=page_template)
     
-    print(f"✅ PDF professionnel créé : {filename}")
+    print(f"pdf professionnel créé : {filename}")
     return filename
