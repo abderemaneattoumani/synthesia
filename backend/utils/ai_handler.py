@@ -32,12 +32,11 @@ def generate_summary(raw_text):
       * Résultats obtenus
       * Recommandations
     - Garder une longueur de 250-350 mots
-    - Utiliser des emojis professionnels pour les titres (📋 🎯 ⚙️ ✅ 💡)
     
     Le rapport doit être adapté pour être lu par un responsable technique."""
     
     try:
-        # Appel à l'API Groq (GRATUIT et RAPIDE)
+        # Appel à l'API Groq
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",  # Modèle gratuit ultra-performant
             messages=[
