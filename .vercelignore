@@ -30,3 +30,4 @@ api/generate-report.py
 api/test-simple.py
 api/wsgi.py
 api/vercel_app.py
+frontend/

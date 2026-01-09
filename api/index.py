@@ -27,7 +27,7 @@ CORS(app, resources={
 
 # logs au démarrage
 print("=" * 60)
-print("🚀 SYNTHESIA API - DÉMARRAGE")
+print("SYNTHESIA API - DEMARRAGE")
 print("=" * 60)
 print(f"python version: {sys.version}")
 print(f"working directory: {os.getcwd()}")
@@ -42,7 +42,7 @@ def health():
     retourne le statut de l'api et la configuration
     """
     try:
-        print("✅ route /api/health appelée")
+        print("route /api/health appelee")
         
         # vérifier la configuration
         groq_configured = bool(os.environ.get('GROQ_API_KEY'))
@@ -55,11 +55,11 @@ def health():
             "environment": "production" if os.environ.get('VERCEL') else "development"
         }
         
-        print(f"✅ réponse health: {response}")
+        print(f"reponse health: {response}")
         return jsonify(response)
         
     except Exception as e:
-        print(f"❌ erreur dans health: {str(e)}")
+        print(f"erreur dans health: {str(e)}")
         print(traceback.format_exc())
         return jsonify({
             "error": "Internal server error",
@@ -73,23 +73,23 @@ def generate_report():
     accepte les données du formulaire et retourne un pdf
     """
     try:
-        print("✅ route /api/generate-report appelée")
+        print("route /api/generate-report appelee")
         
         # gestion des requêtes options (cors preflight)
         if request.method == 'OPTIONS':
-            print("   requête options (cors)")
+            print("requete options (cors)")
             return '', 204
         
         # parser les données json de la requête
         data = request.get_json()
         
         if not data:
-            print("❌ aucune donnée reçue")
+            print("aucune donnee recue")
             return jsonify({"error": "No data provided"}), 400
         
         # validation des données requises
         if not data.get('raw_data'):
-            print("❌ raw_data manquant")
+            print("raw_data manquant")
             return jsonify({"error": "Missing raw_data field"}), 400
         
         # extraire les données du formulaire
@@ -98,29 +98,29 @@ def generate_report():
         author = data.get('author', 'Anonyme')
         role = data.get('role', 'Technicien')
         
-        print(f"   titre: {title}")
-        print(f"   auteur: {author}")
-        print(f"   rôle: {role}")
-        print(f"   données brutes: {len(raw_data)} caractères")
+        print(f"titre: {title}")
+        print(f"auteur: {author}")
+        print(f"role: {role}")
+        print(f"donnees brutes: {len(raw_data)} caracteres")
         
         # importer les utilitaires (imports locaux pour éviter les erreurs)
-        print("   import des utilitaires...")
+        print("import des utilitaires...")
         from utils.ai_handler import generate_summary
         from utils.pdf_generator import create_pdf
-        print("   ✅ utilitaires importés")
+        print("utilitaires importes")
         
         # étape 1: générer le résumé avec l'ia groq
-        print("   étape 1: génération du résumé ia...")
+        print("etape 1: generation du resume ia...")
         summary = generate_summary(raw_data)
-        print(f"   ✅ résumé généré ({len(summary)} caractères)")
+        print(f"resume genere ({len(summary)} caracteres)")
         
         # étape 2: générer le pdf avec le résumé
-        print("   étape 2: génération du pdf...")
+        print("etape 2: generation du pdf...")
         pdf_path = create_pdf(title, summary, author, role)
-        print(f"   ✅ pdf créé: {pdf_path}")
+        print(f"pdf cree: {pdf_path}")
         
         # étape 3: retourner le pdf au client
-        print("   étape 3: envoi du pdf...")
+        print("etape 3: envoi du pdf...")
         
         # utiliser send_file de flask pour envoyer le pdf
         response = send_file(
@@ -130,16 +130,12 @@ def generate_report():
             download_name=f'rapport_{title.replace(" ", "_")}.pdf'
         )
         
-        # nettoyer le fichier temporaire après l'envoi
-        # note: on ne peut pas le supprimer immédiatement car flask l'envoie après
-        # le fichier sera nettoyé automatiquement par vercel après la requête
-        
-        print("   ✅ pdf envoyé avec succès")
+        print("pdf envoye avec succes")
         return response
         
     except Exception as e:
         # gestion complète des erreurs avec logs détaillés
-        print(f"❌ erreur dans generate-report: {str(e)}")
+        print(f"erreur dans generate-report: {str(e)}")
         print(traceback.format_exc())
         
         return jsonify({
@@ -155,5 +151,5 @@ application = app
 
 # pour le développement local (optionnel)
 if __name__ == '__main__':
-    print("🚀 démarrage en mode développement local")
+    print("demarrage en mode developpement local")
     app.run(debug=True, port=5000)
