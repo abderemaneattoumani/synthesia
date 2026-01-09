@@ -2,7 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
+      "src": "api/health.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb"
+      }
+    },
+    {
+      "src": "api/generate-report.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb"
@@ -12,17 +19,13 @@
   "routes": [
     {
       "src": "/api/health",
-      "dest": "api/index.py",
-      "methods": ["GET"]
+      "dest": "api/health.py",
+      "methods": ["GET", "OPTIONS"]
     },
     {
       "src": "/api/generate-report",
-      "dest": "api/index.py",
+      "dest": "api/generate-report.py",
       "methods": ["POST", "OPTIONS"]
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
     },
     {
       "src": "/(.*)",

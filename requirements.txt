@@ -1,7 +1,14 @@
-flask==3.0.0
-flask-cors==4.0.0
+# ═══════════════════════════════════════════════════════
+# DÉPENDANCES SYNTHESIA - VERCEL SERVERLESS
+# ═══════════════════════════════════════════════════════
+# Flask n'est plus nécessaire (handlers Vercel natifs)
+# groq==0.11.0
 groq==0.11.0
+# httpx est une dépendance de groq
 httpx==0.27.0
+# ReportLab pour génération PDF
 reportlab==4.0.7
-python-dotenv==1.0.0
+# Pillow est requis par ReportLab
 Pillow==10.1.0
+# python-dotenv pour variables d'environnement (optionnel)
+python-dotenv==1.0.0

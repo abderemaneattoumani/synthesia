@@ -135,13 +135,31 @@ def create_pdf(title, content, author, role):
         content: Contenu IA
         author: Nom de l'auteur
         role: Poste/rôle de l'auteur
+    
+    Returns:
+        str: Chemin complet du fichier PDF généré (dans /tmp pour Vercel)
     """
+    import tempfile
     
-    output_dir = "generated_reports"
-    os.makedirs(output_dir, exist_ok=True)
-    
+    # ═══════════════════════════════════════════════════════
+    # UTILISER /tmp POUR VERCEL (read-only sauf /tmp)
+    # ═══════════════════════════════════════════════════════
+    # Vercel est read-only sauf pour /tmp
+    # On utilise tempfile pour créer un fichier temporaire
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"{output_dir}/rapport_{timestamp}.pdf"
+    
+    # Créer un fichier temporaire dans /tmp
+    temp_file = tempfile.NamedTemporaryFile(
+        mode='wb',
+        suffix='.pdf',
+        prefix=f'rapport_{timestamp}_',
+        delete=False,
+        dir='/tmp' if os.path.exists('/tmp') else None
+    )
+    filename = temp_file.name
+    temp_file.close()
+    
+    print(f"📄 Création du PDF dans: {filename}")
     
     doc = SimpleDocTemplate(
         filename,
