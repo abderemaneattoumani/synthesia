@@ -1,8 +1,10 @@
 # ═══════════════════════════════════════════════════════
 # DÉPENDANCES SYNTHESIA - VERCEL SERVERLESS
 # ═══════════════════════════════════════════════════════
-# Flask n'est plus nécessaire (handlers Vercel natifs)
-# groq==0.11.0
+# Flask pour solution alternative
+flask==3.0.0
+flask-cors==4.0.0
+# groq pour ia
 groq==0.11.0
 # httpx est une dépendance de groq
 httpx==0.27.0

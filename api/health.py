@@ -1,67 +1,68 @@
 """
 route /api/health pour vercel
-handler natif vercel python - pas de flask
+format handler simple et robuste
 """
 import json
 import sys
 import os
 
-# logs au chargement du module
+# logs au chargement
 print("=" * 60)
 print("chargement api/health.py")
 print("=" * 60)
-print(f"python version: {sys.version}")
-print(f"working directory: {os.getcwd()}")
-print(f"groq_api_key configured: {bool(os.environ.get('GROQ_API_KEY'))}")
+print(f"python: {sys.version}")
+print(f"cwd: {os.getcwd()}")
+print(f"groq_key: {bool(os.environ.get('GROQ_API_KEY'))}")
 print("=" * 60)
 
+# handler vercel - format le plus simple
+# vercel passe un objet request avec des attributs
 def handler(request):
     """
-    handler vercel natif pour /api/health
-    accepte un objet request de vercel et retourne une réponse
+    handler vercel pour /api/health
+    format simple et robuste
     """
     try:
         print("handler health appelé")
         
-        # récupérer la méthode http (get, post, etc.)
-        # vercel peut passer request comme dict ou objet
-        if hasattr(request, 'method'):
+        # méthode 1: essayer comme attribut
+        try:
             method = request.method
-        elif isinstance(request, dict):
-            method = request.get('method', 'GET')
-        else:
-            method = getattr(request, 'method', 'GET')
+            print(f"   method (attribut): {method}")
+        except:
+            # méthode 2: essayer comme dict
+            try:
+                method = request.get('method', 'GET') if isinstance(request, dict) else 'GET'
+                print(f"   method (dict): {method}")
+            except:
+                # méthode 3: valeur par défaut
+                method = 'GET'
+                print(f"   method (défaut): {method}")
         
-        print(f"   method: {method}")
+        # vérifier groq
+        groq_ok = bool(os.environ.get('GROQ_API_KEY'))
         
-        # vérifier la clé api groq dans les variables d'environnement
-        groq_configured = bool(os.environ.get('GROQ_API_KEY'))
-        
-        # préparer la réponse json
-        response_data = {
+        # réponse
+        response = {
             "status": "online",
             "message": "SyntheSIA is running",
-            "groq_configured": groq_configured,
-            "environment": "production" if os.environ.get('VERCEL') else "development"
+            "groq_configured": groq_ok
         }
         
-        print(f"réponse générée: {response_data}")
+        print(f"réponse: {response}")
         
-        # retourner la réponse au format vercel
+        # retourner au format vercel
         return {
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(response_data, ensure_ascii=False)
+            'body': json.dumps(response, ensure_ascii=False)
         }
         
     except Exception as e:
-        # en cas d'erreur, logger et retourner une erreur 500
-        print(f"erreur dans handler health: {str(e)}")
+        print(f"ERREUR: {str(e)}")
         import traceback
         print(traceback.format_exc())
         
@@ -72,7 +73,7 @@ def handler(request):
                 'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps({
-                "error": "Internal server error",
-                "details": str(e)
+                "error": str(e),
+                "type": type(e).__name__
             }, ensure_ascii=False)
         }

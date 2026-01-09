@@ -1,95 +1,98 @@
-from flask import Flask, request, jsonify, send_file
+"""
+point d'entrée principal avec flask
+version simple et robuste pour vercel
+"""
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from datetime import datetime
 import os
 import sys
 
-# Configuration du path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# Imports
-from utils.ai_handler import generate_summary
-from utils.pdf_generator import create_pdf
-
-# Application Flask
+# créer l'app flask
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/health', methods=['GET'])
+# logs
+print("=" * 60)
+print("chargement api/index.py avec flask")
+print("=" * 60)
+print(f"python: {sys.version}")
+print(f"cwd: {os.getcwd()}")
+print(f"groq_key: {bool(os.environ.get('GROQ_API_KEY'))}")
+print("=" * 60)
+
+@app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health():
-    return jsonify({
-        "status": "online",
-        "message": "SyntheSIA is running",
-        "groq_configured": bool(os.environ.get('GROQ_API_KEY'))
-    })
+    """route health check"""
+    try:
+        print("route /api/health appelée")
+        groq_ok = bool(os.environ.get('GROQ_API_KEY'))
+        return jsonify({
+            "status": "online",
+            "message": "SyntheSIA is running",
+            "groq_configured": groq_ok
+        })
+    except Exception as e:
+        print(f"erreur health: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/generate-report', methods=['POST', 'OPTIONS'])
 def generate_report():
-    if request.method == 'OPTIONS':
-        return '', 204
-    
+    """route génération rapport"""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data"}), 400
+        print("route /api/generate-report appelée")
         
+        # gestion options
+        if request.method == 'OPTIONS':
+            return '', 204
+        
+        # parser données
+        data = request.get_json() or {}
+        
+        if not data.get('raw_data'):
+            return jsonify({"error": "Missing raw_data"}), 400
+        
+        # extraire données
         title = data.get('title', 'Rapport')
         raw_data = data.get('raw_data', '')
         author = data.get('author', 'Anonyme')
         role = data.get('role', 'Technicien')
         
-        if not raw_data:
-            return jsonify({"error": "Missing raw_data"}), 400
+        print(f"données: titre={title}, auteur={author}, données={len(raw_data)} chars")
         
+        # ajouter chemin pour imports
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        
+        # importer utilitaires
+        from utils.ai_handler import generate_summary
+        from utils.pdf_generator import create_pdf
+        from flask import send_file
+        
+        # générer résumé
+        print("génération ia...")
         summary = generate_summary(raw_data)
-        pdf_path = create_pdf(title, summary, author, role)
+        print(f"résumé ok ({len(summary)} chars)")
         
+        # générer pdf
+        print("génération pdf...")
+        pdf_path = create_pdf(title, summary, author, role)
+        print(f"pdf ok: {pdf_path}")
+        
+        # retourner pdf
         return send_file(
             pdf_path,
             mimetype='application/pdf',
             as_attachment=True,
-            download_name=f"rapport_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            download_name='rapport.pdf'
         )
+        
     except Exception as e:
+        print(f"erreur generate-report: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
-# CRITICAL: Point d'entrée pour Vercel
-def handler(event, context):
-    """
-    Handler serverless pour Vercel
-    Convertit les événements Vercel en requêtes WSGI
-    """
-    from werkzeug.wrappers import Request, Response
-    from io import BytesIO
-    
-    # Construire la requête WSGI depuis l'événement Vercel
-    environ = {
-        'REQUEST_METHOD': event.get('httpMethod', 'GET'),
-        'PATH_INFO': event.get('path', '/'),
-        'QUERY_STRING': event.get('queryStringParameters', ''),
-        'CONTENT_TYPE': event.get('headers', {}).get('content-type', ''),
-        'CONTENT_LENGTH': len(event.get('body', '')),
-        'wsgi.input': BytesIO(event.get('body', '').encode()),
-        'wsgi.errors': sys.stderr,
-        'wsgi.version': (1, 0),
-        'wsgi.multithread': False,
-        'wsgi.multiprocess': True,
-        'wsgi.run_once': False,
-        'wsgi.url_scheme': 'https',
-        'SERVER_NAME': 'vercel',
-        'SERVER_PORT': '443',
-    }
-    
-    # Ajouter les headers
-    for key, value in event.get('headers', {}).items():
-        key = 'HTTP_' + key.upper().replace('-', '_')
-        environ[key] = value
-    
-    # Appeler l'app Flask
-    response = Response.from_app(app, environ)
-    
-    return {
-        'statusCode': response.status_code,
-        'headers': dict(response.headers),
-        'body': response.get_data(as_text=True)
-    }
+# export pour vercel
+# vercel cherche une variable 'app' ou 'application'
+application = app
